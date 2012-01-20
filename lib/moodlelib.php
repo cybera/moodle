@@ -1289,7 +1289,7 @@ function get_config($plugin, $name = NULL) {
                 // setting forced in config file
                 return $CFG->forced_plugin_settings[$plugin][$name];
             } else {
-				if($CFG->performance_patch) {
+				if(isset($CFG->performance_patch) && $CFG->performance_patch) {
 					return get_config_from_db($plugin, $name);
 				} else {
 					return $DB->get_field('config_plugins', 'value', array('plugin'=>$plugin, 'name'=>$name));
@@ -1368,7 +1368,7 @@ function get_config_from_db($plugin, $name = NULL) {
 		}
 		
 		if(extension_loaded('apc')) {
-			apc_add('config_plugins', $db_cfg, 300);
+			apc_add('config_plugins', $db_cfg, 120);
 		}
 	}
 	
