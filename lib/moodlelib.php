@@ -1290,7 +1290,9 @@ function get_config($plugin, $name = NULL) {
                 return $CFG->forced_plugin_settings[$plugin][$name];
             } else {
 				if(isset($CFG->performance_patch) && $CFG->performance_patch) {
-					return get_config_from_db($plugin, $name);
+					return cached_value("config_plugins-$plugin-$name", function() use (&$DB, $plugin, $name) {
+						return $DB->get_field('config_plugins', 'value', array('plugin'=>$plugin, 'name'=>$name));
+					});
 				} else {
 					return $DB->get_field('config_plugins', 'value', array('plugin'=>$plugin, 'name'=>$name));
 				}
@@ -1342,27 +1344,17 @@ function get_config($plugin, $name = NULL) {
 }
 
 
-/**
- * Wrapper function to cache results of config retrieval in a local cache, via the apc extension,
- * if it's loaded. This can help reduce CPU load on the database server.
- *
- * @param string $plugin full component name
- * @param string $name default NULL
- */
-function get_config_from_db($plugin, $name = NULL) {
-	global $DB;
-
-	$db_cfg = extension_loaded('apc') ? apc_fetch("config_plugins-$plugin-$name") : null;
-
-	if(!$db_cfg) {
-		$db_cfg = $DB->get_field('config_plugins', 'value', array('plugin'=>$plugin, 'name'=>$name));
+function cached_value($key, $callback)
+{
+	$value = extension_loaded('apc') ? apc_fetch($key) : null;
+	if(!$value) {
+		$value = $callback();
 
 		if(extension_loaded('apc')) {
-			apc_add("config_plugins-$plugin-$name", $db_cfg, 300);
+			apc_add($key, $value, 120);
 		}
 	}
-
-	return $db_cfg;
+	return $value;
 }
 
 /**
