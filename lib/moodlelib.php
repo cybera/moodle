@@ -1352,29 +1352,18 @@ function get_config($plugin, $name = NULL) {
 function get_config_from_db($plugin, $name = NULL) {
 	global $DB;
 
-	$db_cfg = extension_loaded('apc') ? apc_fetch('config_plugins') : null;
+	$db_cfg = extension_loaded('apc') ? apc_fetch("config_plugins-$plugin-$name") : null;
 
 	if(!$db_cfg) {
-		$config_entries = $DB->get_records_select('config_plugins', '');
-		$db_cfg = array();
-		foreach ($config_entries as $config_entry) {
-			if(!isset($db_cfg[$config_entry->plugin])) {
-				$db_cfg[$config_entry->plugin] = array();
-			}
+		$db_cfg = $DB->get_field('config_plugins', 'value', array('plugin'=>$plugin, 'name'=>$name));
 
-			if(!isset($db_cfg[$config_entry->plugin][$config_entry->name])) {
-				$db_cfg[$config_entry->plugin][$config_entry->name] = $config_entry->value;
-			}
-		}
-		
 		if(extension_loaded('apc')) {
-			apc_add('config_plugins', $db_cfg, 120);
+			apc_add("config_plugins-$plugin-$name", $db_cfg, 300);
 		}
 	}
-	
-	return $db_cfg[$plugin][$name];
-}
 
+	return $db_cfg;
+}
 
 /**
  * Removes a key from global configuration
